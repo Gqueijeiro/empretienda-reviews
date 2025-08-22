@@ -2,9 +2,7 @@
 
 async function fetchReviews() {
   try {
-    // ⚠️ IMPORTANTE: este link es el de tu sheet publicado en CSV
     const sheetUrl = "https://docs.google.com/spreadsheets/d/1VkrVoNVKMhNAEwsmh7jvXcfhV7vQa-EAirdOSIgpFT8/gviz/tq?tqx=out:csv";
-
     const response = await fetch(sheetUrl);
     const text = await response.text();
 
@@ -18,41 +16,41 @@ async function fetchReviews() {
       return review;
     });
 
-    renderGlobalReviews(reviews);
-    renderProductReviews(reviews);
+    injectReviews(reviews);
 
   } catch (e) {
     console.error("Error cargando reseñas:", e);
   }
 }
 
-// Render reseñas globales
-function renderGlobalReviews(reviews) {
-  const container = document.getElementById("reviews-global");
-  if (!container) return;
-
-  container.innerHTML = reviews.map(r => formatReview(r)).join("");
-}
-
-// Render reseñas por producto
-function renderProductReviews(reviews) {
-  const container = document.getElementById("reviews-producto");
-  if (!container) return;
-
-  // Buscar nombre de producto en la página (Empretienda lo suele poner en <h1>)
+function injectReviews(reviews) {
+  // Detectar si es home (no hay h1 de producto) o producto
   const productTitle = document.querySelector("h1")?.innerText?.trim();
-  if (!productTitle) return;
+  const container = document.createElement("div");
+  container.style.margin = "20px 0";
+  container.innerHTML = "<h2>Reseñas</h2>";
 
-  const filtered = reviews.filter(r =>
-    r.producto && r.producto.toLowerCase() === productTitle.toLowerCase()
-  );
+  let toShow = reviews;
 
-  container.innerHTML = filtered.length
-    ? filtered.map(r => formatReview(r)).join("")
-    : "<p>Este producto todavía no tiene reseñas.</p>";
+  if (productTitle) {
+    // Página de producto
+    toShow = reviews.filter(r =>
+      r.producto && r.producto.toLowerCase() === productTitle.toLowerCase()
+    );
+    if (toShow.length === 0) {
+      container.innerHTML += "<p>Este producto todavía no tiene reseñas.</p>";
+    }
+  }
+
+  toShow.forEach(r => {
+    container.innerHTML += formatReview(r);
+  });
+
+  // Insertar automáticamente al final del contenido
+  const main = document.querySelector("main") || document.body;
+  main.appendChild(container);
 }
 
-// Generar HTML de cada reseña
 function formatReview(r) {
   const stars = "⭐".repeat(parseInt(r.estrellas || 0));
   return `
@@ -64,5 +62,4 @@ function formatReview(r) {
   `;
 }
 
-// Ejecutar al cargar
 document.addEventListener("DOMContentLoaded", fetchReviews);
